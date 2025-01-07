@@ -1,19 +1,23 @@
-import { Application, Sprite } from 'pixi.js'
+import { Application, Rectangle } from 'pixi.js';
+import { Scene } from '../scenes/Scene'; // This is the import statement
 
 const app = new Application<HTMLCanvasElement>({
-	view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
-	resolution: window.devicePixelRatio || 1,
-	autoDensity: true,
-	backgroundColor: 0x6495ed,
-	width: 640,
-	height: 480
+    view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
+    resolution: window.devicePixelRatio || 1,
+    autoDensity: true,
+    backgroundColor: 0x6495ed,
+    width: 640,
+    height: 480
 });
 
-const clampy: Sprite = Sprite.from("clampy.png");
+const sceny: Scene = new Scene(app.screen.width, app.screen.height);
 
-clampy.anchor.set(0.5);
+app.stage.addChild(sceny);
 
-clampy.x = app.screen.width / 2;
-clampy.y = app.screen.height / 2;
+// Ensure the stage is interactive and set the hitArea to cover the entire canvas
+app.stage.interactive = true;
+app.stage.hitArea = new Rectangle(0, 0, app.screen.width, app.screen.height);
 
-app.stage.addChild(clampy);
+// Add event listener to the stage
+app.stage.on("pointertap", sceny.onStageClick, sceny);
+app.stage.eventMode = 'dynamic';
