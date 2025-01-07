@@ -1,18 +1,22 @@
-import { Container, Ticker, FederatedPointerEvent, Texture } from 'pixi.js';
+import { Container, Ticker, FederatedPointerEvent, Texture, Graphics } from 'pixi.js';
 import { Clampy } from './Clampy';
 
 export class Scene extends Container {
     private readonly screenWidth: number;
     private readonly screenHeight: number;
     private clampys: Clampy[] = [];
+    private healthBars: Graphics[] = [];
+    private graphics: Graphics;
 
     constructor(screenWidth: number, screenHeight: number) {
         super();
         this.screenWidth = screenWidth;
         this.screenHeight = screenHeight;
+        this.graphics = new Graphics();
+        this.addChild(this.graphics);
 
         const clampy = new Clampy(Texture.from("inf.png"));
-        clampy.x = this.screenWidth / 2 + 50;
+        clampy.x = this.screenWidth / 2 + 100;
         clampy.y = this.screenHeight / 2;
         clampy.targetX = clampy.x;
         clampy.targetY = clampy.y;
@@ -21,7 +25,7 @@ export class Scene extends Container {
         this.addChild(clampy);
 
         const enemy_clampy = new Clampy(Texture.from("inf_selected.png"));
-        enemy_clampy.x = this.screenWidth / 2 - 50;
+        enemy_clampy.x = this.screenWidth / 2 - 100;
         enemy_clampy.y = this.screenHeight / 2;
         enemy_clampy.targetX = enemy_clampy.x;
         enemy_clampy.targetY = enemy_clampy.y;
@@ -52,10 +56,24 @@ export class Scene extends Container {
     }
 
     private update(deltaTime: number): void {
-        for (const clampy of this.clampys) {
-            let direction = Math.atan2(clampy.targetY - clampy.y, clampy.targetX - clampy.x);
-            clampy.x += Math.cos(direction) * deltaTime * clampy.speed;
-            clampy.y += Math.sin(direction) * deltaTime * clampy.speed;
+        this.clampys.forEach((clampy, index) => {
+            if (!this.healthBars[index]) {
+                const healthBar = new Graphics();
+                this.healthBars[index] = healthBar;
+                this.addChild(healthBar);
+            }
+            const healthBar = this.healthBars[index];
+            healthBar.clear();
+            healthBar.beginFill(0xff1010);
+            healthBar.drawRect(clampy.x - 25, clampy.y - 30, 50 * (clampy.health / 100), 5);
+            healthBar.endFill();
+
+            let distance = Math.sqrt(Math.pow(clampy.x - clampy.targetX, 2) + Math.pow(clampy.y - clampy.targetY, 2));
+            if (distance > 1) {
+                let direction = Math.atan2(clampy.targetY - clampy.y, clampy.targetX - clampy.x);
+                clampy.x += Math.cos(direction) * deltaTime * clampy.speed;
+                clampy.y += Math.sin(direction) * deltaTime * clampy.speed;
+            }
 
             for (const otherClampy of this.clampys) {
                 if (clampy === otherClampy) {
@@ -63,7 +81,12 @@ export class Scene extends Container {
                 }
                 else {
                     let distance = Math.sqrt(Math.pow(clampy.x - otherClampy.x, 2) + Math.pow(clampy.y - otherClampy.y, 2));
-                    if (distance < 50) {
+                    if (distance < 100) {
+                        // Draw a line between the two clampys
+                        this.graphics.clear();
+                        this.graphics.lineStyle(1, 0x000000, 1);
+                        this.graphics.moveTo(clampy.x, clampy.y);
+                        this.graphics.lineTo(otherClampy.x, otherClampy.y);
                         clampy.health -= deltaTime;
                         otherClampy.health -= deltaTime;
                     }
@@ -71,9 +94,11 @@ export class Scene extends Container {
             }
 
             if (clampy.health <= 0) {
+                this.graphics.clear();
                 this.removeChild(clampy);
                 this.clampys.splice(this.clampys.indexOf(clampy), 1);
+                this.healthBars.splice(index, 1);
             }
-        }
+        });
     }
 }
