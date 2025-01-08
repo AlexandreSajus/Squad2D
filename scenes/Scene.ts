@@ -11,6 +11,7 @@ export class Scene extends Container {
     private graphics: Graphics;
     private tiles: Tile[][] = [];
     private fogOfWarMask: Graphics;
+    private combinedMask: Graphics;
 
     constructor(screenWidth: number, screenHeight: number) {
         super();
@@ -20,25 +21,39 @@ export class Scene extends Container {
         this.addChild(this.graphics);
 
         this.fogOfWarMask = new Graphics();
+        this.combinedMask = new Graphics();
         this.addChild(this.fogOfWarMask);
+        this.addChild(this.combinedMask);
 
         this.createTiles();
         this.drawTiles();
 
         const clampy = new Clampy(Texture.from("inf.png"));
-        clampy.x = this.screenWidth / 2 + 100;
-        clampy.y = this.screenHeight / 2;
+        clampy.x = this.screenWidth / 2 + 200;
+        clampy.y = this.screenHeight / 2 + 200;
         clampy.targetX = clampy.x;
         clampy.targetY = clampy.y;
-        clampy.health = 150;
+        clampy.health = 100;
         clampy.currentTile = this.getTileAt(clampy.x, clampy.y);
         console.log(clampy.currentTile);
         this.clampys.push(clampy);
         this.addChild(clampy);
 
+        const clampy2 = new Clampy(Texture.from("inf.png"));
+        clampy2.x = this.screenWidth / 2 + 150;
+        clampy2.y = this.screenHeight / 2 + 200;
+        clampy2.targetX = clampy2.x;
+        clampy2.targetY = clampy2.y;
+        clampy2.health = 100;
+        clampy2.currentTile = this.getTileAt(clampy2.x, clampy2.y);
+        console.log(clampy2.currentTile);
+        this.clampys.push(clampy2);
+        this.addChild(clampy2);
+
         const enemy_clampy = new Clampy(Texture.from("inf_selected.png"));
-        enemy_clampy.x = this.screenWidth / 2 - 150;
-        enemy_clampy.y = this.screenHeight / 2;
+        // Random position for the enemy clampy
+        enemy_clampy.x = Math.random() * this.screenWidth;
+        enemy_clampy.y = Math.random() * this.screenHeight;
         enemy_clampy.targetX = enemy_clampy.x;
         enemy_clampy.targetY = enemy_clampy.y;
         enemy_clampy.enemy = true;
@@ -47,15 +62,28 @@ export class Scene extends Container {
         console.log(enemy_clampy.currentTile);
         this.clampys.push(enemy_clampy);
         this.addChild(enemy_clampy);
-
         clampy.otherClampys.push(enemy_clampy);
+
+        const enemy_clampy2 = new Clampy(Texture.from("inf_selected.png"));
+        // Random position for the enemy clampy
+        enemy_clampy2.x = Math.random() * this.screenWidth;
+        enemy_clampy2.y = Math.random() * this.screenHeight;
+        enemy_clampy2.targetX = enemy_clampy2.x;
+        enemy_clampy2.targetY = enemy_clampy2.y;
+        enemy_clampy2.enemy = true;
+        enemy_clampy2.otherClampys.push(clampy2);
+        enemy_clampy2.currentTile = this.getTileAt(enemy_clampy2.x, enemy_clampy2.y);
+        console.log(enemy_clampy2.currentTile);
+        this.clampys.push(enemy_clampy2);
+        this.addChild(enemy_clampy2);
+        clampy2.otherClampys.push(enemy_clampy2);
 
         Ticker.shared.add(this.update, this);
     }
 
     private createTiles(): void {
-        const tileWidth = 100;
-        const tileHeight = 100;
+        const tileWidth = 50;
+        const tileHeight = 50;
         const rows = mapData.tiles.length;
         const cols = mapData.tiles[0].length;
 
@@ -83,8 +111,8 @@ export class Scene extends Container {
     }
 
     private getTileAt(x: number, y: number): Tile | null {
-        const row = Math.floor(y / 100);
-        const col = Math.floor(x / 100);
+        const row = Math.floor(y / 50);
+        const col = Math.floor(x / 50);
         return this.tiles[row] ? this.tiles[row][col] : null;
     }
 
@@ -135,9 +163,15 @@ export class Scene extends Container {
         const visibilityRadius = 150;
         // Clear the previous fog of war mask
         this.fogOfWarMask.clear();
-        this.fogOfWarMask.beginFill(0x000000, 0.5);
+        this.fogOfWarMask.beginFill(0xffffff, 0.2); // Dark color with some transparency
+
+        // Draw a dark rectangle covering the entire screen
         this.fogOfWarMask.drawRect(0, 0, this.screenWidth, this.screenHeight);
-        this.fogOfWarMask.beginHole(); 
+        this.fogOfWarMask.endFill();
+
+        // Clear the combined mask
+        this.combinedMask.clear();
+        this.combinedMask.beginFill(0xffffff);
         this.clampys.forEach((clampy, index) => {
             if (!this.healthBars[index]) {
                 const healthBar = new Graphics();
@@ -146,9 +180,18 @@ export class Scene extends Container {
             }
             const healthBar = this.healthBars[index];
             healthBar.clear();
-            healthBar.beginFill(0xff1010);
-            healthBar.drawRect(clampy.x - 25, clampy.y - 30, 50 * (clampy.health / 100), 5);
-            healthBar.endFill();
+            if (clampy.enemy && clampy.visible) {
+                healthBar.beginFill(0xff1010);
+                healthBar.drawRect(clampy.x - 25, clampy.y - 30, 50 * (clampy.health / 100), 5);
+                healthBar.endFill();
+            }
+
+            else if (!clampy.enemy) {
+                healthBar.beginFill(0x1010ff);
+                healthBar.drawRect(clampy.x - 25, clampy.y - 30, 50 * (clampy.health / 100), 5);
+                healthBar.endFill();
+            }
+
 
             let distance = Math.sqrt(Math.pow(clampy.x - clampy.targetX, 2) + Math.pow(clampy.y - clampy.targetY, 2));
             if (distance > 1) {
@@ -159,21 +202,42 @@ export class Scene extends Container {
             }
 
             if (!clampy.enemy) {
-                this.fogOfWarMask.drawCircle(clampy.x, clampy.y, visibilityRadius);
+                this.combinedMask.drawCircle(clampy.x, clampy.y, visibilityRadius);
             }
 
             for (const otherClampy of this.clampys) {
                 if (clampy === otherClampy) {
                     continue;
                 }
+            
+                if (clampy.enemy) {
+                    let visible = false;
+                    for (const friendlyClampy of this.clampys) {
+                        if (!friendlyClampy.enemy) {
+                            const dist = this.getDistance(friendlyClampy, clampy);
+                            if (dist <= visibilityRadius) {
+                                visible = true;
+                                break;
+                            }
+                        }
+                    }
+                    clampy.visible = visible;
+                }
+                else {
+                    // existing code for non-enemy clampys
+                }
+            }
+
+            for (const otherClampy of this.clampys) {
+                if (clampy === otherClampy) {
+                    continue;
+                }
+                else if (clampy.enemy === otherClampy.enemy) {
+                    continue;
+                }
                 else {
                     let distance = Math.sqrt(Math.pow(clampy.x - otherClampy.x, 2) + Math.pow(clampy.y - otherClampy.y, 2));
-                    if (distance < 100) {
-                        // Draw a line between the two clampys
-                        otherClampy.graphics.clear();
-                        otherClampy.graphics.lineStyle(1, 0x000000, 1);
-                        otherClampy.graphics.moveTo(clampy.x, clampy.y);
-                        otherClampy.graphics.lineTo(otherClampy.x, otherClampy.y);
+                    if (distance < 150) {
                         let clampyDefenseEfficiency;
                         if (clampy.currentTile?.type === TileType.Cover) {
                             clampyDefenseEfficiency = 2;
@@ -194,18 +258,11 @@ export class Scene extends Container {
                         else {
                             otherClampyDefenseEfficiency = 1;
                         }
-                        clampy.health -= deltaTime * 1 / clampyDefenseEfficiency;
-                        otherClampy.health -= deltaTime * 1 / otherClampyDefenseEfficiency;
+                        clampy.health -= deltaTime * 0.3 / clampyDefenseEfficiency;
+                        otherClampy.health -= deltaTime * 0.3 / otherClampyDefenseEfficiency;
                     }
                 }
             }
-
-            this.clampys.forEach(otherClampy => {
-                if (clampy !== otherClampy && !clampy.enemy) {
-                    const dist = this.getDistance(clampy, otherClampy);
-                    otherClampy.visible = dist <= visibilityRadius || !otherClampy.enemy;
-                }
-            });
 
             if (clampy.health <= 0) {
                 clampy.graphics.clear();
@@ -214,6 +271,8 @@ export class Scene extends Container {
                 this.healthBars.splice(index, 1);
             }
         });
-        this.fogOfWarMask.endFill();
+        this.combinedMask.endFill();
+        this.fogOfWarMask.mask = this.combinedMask;
+
     }
 }
