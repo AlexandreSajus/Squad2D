@@ -1,4 +1,5 @@
-import { Sprite, Texture } from 'pixi.js';
+import { Sprite, Texture, Graphics } from 'pixi.js';
+import { Tile } from './Tile';
 
 export class Clampy extends Sprite {
     public selected: boolean;
@@ -8,6 +9,8 @@ export class Clampy extends Sprite {
     public enemy: boolean = false;
     public otherClampys: Clampy[] = [];
     public health: number = 100;
+    public currentTile: Tile | null = null;
+    public graphics: Graphics = new Graphics();
 
     constructor(texture: Texture) {
         super(texture);
